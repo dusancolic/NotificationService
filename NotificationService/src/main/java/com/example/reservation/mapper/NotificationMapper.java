@@ -16,6 +16,7 @@ public class NotificationMapper {
         notificationDto.setId(notification.getId());
         notificationDto.setNotificationTypeDto(new NotificationTypeDto(notification.getType().getId(), notification.getType().getText(), notification.getType().getName()));
         notificationDto.setParameters(notification.getParameters());
+        notificationDto.setEmail(notification.getEmail());
         return notificationDto;
     }
     public Notification notificationCreateDtoToNotification(NotificationCreateDto notificationCreateDto)

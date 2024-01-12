@@ -1,8 +1,12 @@
 package com.example.reservation.controller;
 
 import com.example.reservation.dto.*;
+import com.example.reservation.security.CheckSecurity;
+import com.example.reservation.security.service.TokenService;
+import com.example.reservation.service.EmailService;
 import com.example.reservation.service.NotificationService;
 import com.example.reservation.service.NotificationTypeService;
+import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/notification")
@@ -22,26 +27,46 @@ public class NotificationController {
 
     private NotificationService notificationService;
     private NotificationTypeService notificationTypeService;
-
+    private TokenService tokenService;
+    private EmailService emailService;
     @GetMapping
-    public ResponseEntity<Page<NotificationDto>> getAllNotifications(String authorization, Pageable pageable)
+    @CheckSecurity(roles = {"ROLE_ADMIN", "ROLE_CLIENT", "ROLE_MANAGER"})
+    public ResponseEntity<Page<NotificationDto>> getAllNotifications(@RequestHeader("Authorization") String authorization,
+                                                                     Pageable pageable)
     {
-        return new ResponseEntity<>(notificationService.findAll(pageable),HttpStatus.OK);
+        Claims claims = tokenService.parseToken(authorization.split(" ")[1]);
+        if(claims.get("role").equals("ROLE_ADMIN"))
+            return new ResponseEntity<>(notificationService.findAll(pageable),HttpStatus.OK);
+        return new ResponseEntity<>(notificationService.findAllByEmail(claims.get("email").toString(), pageable),HttpStatus.OK);
     }
     @GetMapping("/filter/{string}")
-    public ResponseEntity<Page<NotificationDto>> getAllNotificationByString(String authorization, @PathVariable String string, Pageable pageable)
+    @CheckSecurity(roles = {"ROLE_ADMIN", "ROLE_CLIENT", "ROLE_MANAGER"})
+    public ResponseEntity<Page<NotificationDto>> getAllNotificationByString(@RequestHeader("Authorization") String authorization,
+                                                                            @PathVariable String string, Pageable pageable)
     {
-        if(string.contains("@"))
+        Claims claims = tokenService.parseToken(authorization.split(" ")[1]);
+        boolean admin = claims.get("role").equals("ROLE_ADMIN");
+        if(string.contains("@") && admin)
             return new ResponseEntity<>(notificationService.findAllByEmail(string, pageable),HttpStatus.OK);
-        return new ResponseEntity<>(notificationService.findAllByType(string, pageable), HttpStatus.OK);
+        if(!string.contains("@") && admin)
+            return new ResponseEntity<>(notificationService.findAllByType(string, pageable), HttpStatus.OK);
+        if(string.contains("@"))
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(notificationService.findAllByTypeAndByEmail(string, claims.get("email").toString(), pageable), HttpStatus.OK);
     }
     @GetMapping("/filter/r-")
-    public ResponseEntity<Page<NotificationDto>> getAllNotificationsInRange(String authorization,@RequestBody @Valid RangeDto rangeDto, Pageable pageable)
+    @CheckSecurity(roles = {"ROLE_ADMIN", "ROLE_CLIENT", "ROLE_MANAGER"})
+    public ResponseEntity<Page<NotificationDto>> getAllNotificationsInRange(@RequestHeader("Authorization") String authorization,
+                                                                            @RequestBody @Valid RangeDto rangeDto, Pageable pageable)
     {
+        Claims claims = tokenService.parseToken(authorization.split(" ")[1]);
+        boolean admin = claims.get("role").equals("ROLE_ADMIN");
         try {
             LocalDate date = LocalDate.parse(rangeDto.getBegin());
             LocalDate date1 = LocalDate.parse(rangeDto.getEnd());
-            return new ResponseEntity<>(notificationService.findAllInRange(date, date1, pageable), HttpStatus.OK);
+            if(admin)
+                return new ResponseEntity<>(notificationService.findAllInRange(date, date1, pageable), HttpStatus.OK);
+            return new ResponseEntity<>(notificationService.findAllInRangeAndByEmail(date, date1,claims.get("email").toString(), pageable), HttpStatus.OK);
         }
         catch (Exception e)
         {
@@ -49,21 +74,31 @@ public class NotificationController {
         }
     }
     @GetMapping("/filter/{string}/{string1}")
-    public ResponseEntity<Page<NotificationDto>> getAllNotificationByStrings(String authorization, @PathVariable String string, @PathVariable String string1, Pageable pageable)
+    @CheckSecurity(roles = {"ROLE_ADMIN"})
+    public ResponseEntity<Page<NotificationDto>> getAllNotificationByStrings(@RequestHeader("Authorization") String authorization,
+                                                                             @PathVariable String string, @PathVariable String string1, Pageable pageable)
     {
         if(string.contains("@"))
             return new ResponseEntity<>(notificationService.findAllByTypeAndByEmail(string1, string, pageable),HttpStatus.OK);
         return new ResponseEntity<>(notificationService.findAllByTypeAndByEmail(string, string1, pageable),HttpStatus.OK);
     }
     @GetMapping("/filter/r-{string}")
-    public ResponseEntity<Page<NotificationDto>> getAllNotificationByStringAndInRange(String authorization, @PathVariable String string
+    @CheckSecurity(roles = {"ROLE_ADMIN", "ROLE_CLIENT", "ROLE_MANAGER"})
+    public ResponseEntity<Page<NotificationDto>> getAllNotificationByStringAndInRange(@RequestHeader("Authorization") String authorization,
+                                                                                      @PathVariable String string
             , @RequestBody @Valid RangeDto rangeDto, Pageable pageable) {
+        Claims claims = tokenService.parseToken(authorization.split(" ")[1]);
+        boolean admin = claims.get("role").equals("ROLE_ADMIN");
         try{
             LocalDate date = LocalDate.parse(rangeDto.getBegin());
             LocalDate date1 = LocalDate.parse(rangeDto.getEnd());
-            if(string.contains("@"))
+            if(string.contains("@") && admin)
                 return new ResponseEntity<>(notificationService.findAllInRangeAndByEmail(date, date1, string, pageable),HttpStatus.OK);
-            return new ResponseEntity<>(notificationService.findAllByTypeAndInRange(string, date, date1, pageable),HttpStatus.OK);
+            if(!string.contains("@") && admin)
+                return new ResponseEntity<>(notificationService.findAllByTypeAndInRange(string, date, date1, pageable),HttpStatus.OK);
+            if(string.contains("@"))
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(notificationService.findAllByTypeAndByEmailAndInRange(string, claims.get("email").toString(), date, date1, pageable),HttpStatus.OK);
         }
         catch (Exception e)
         {
@@ -72,7 +107,8 @@ public class NotificationController {
 
     }
     @GetMapping("/filter/r-{string}/{string1}")
-    public ResponseEntity<Page<NotificationDto>> getAllNotificationByStringsAndInRange(String authorization, @PathVariable String string
+    @CheckSecurity(roles = {"ROLE_ADMIN"})
+    public ResponseEntity<Page<NotificationDto>> getAllNotificationByStringsAndInRange(@RequestHeader("Authorization") String authorization, @PathVariable String string
             , @PathVariable String string1, @RequestBody @Valid RangeDto rangeDto, Pageable pageable) {
         try{
             LocalDate date = LocalDate.parse(rangeDto.getBegin());
@@ -87,44 +123,45 @@ public class NotificationController {
         }
 
     }
-    // TODO treba tacno taj id da se koristi 
-    /*
-    @GetMapping("/manager")
-    public ResponseEntity<Page<NotificationDto>> getAllNotificationsM(String authorization, Pageable pageable)
-    {
-        Long id = 1L;
-        return new ResponseEntity<>(notificationService.findAllManager(id, pageable),HttpStatus.OK);
-    }
-    // TODO treba tacno taj id da se koristi 
-    @GetMapping("/client")
-    public ResponseEntity<Page<NotificationDto>> getAllNotificationsC(String authorization, Pageable pageable)
-    {
-        Long id = 1L;
-        return new ResponseEntity<>(notificationService.findAllClient(id, pageable),HttpStatus.OK);
-    }*/
 
     //NOTIFICATION TYPES
-    
+
     @GetMapping("/type")
-    public ResponseEntity<Page<NotificationTypeDto>> getAllNotificationTypes(String authorization, Pageable pageable)
+    @CheckSecurity(roles = {"ROLE_ADMIN"})
+    public ResponseEntity<Page<NotificationTypeDto>> getAllNotificationTypes(@RequestHeader("Authorization") String authorization,
+                                                                             Pageable pageable)
     {
         return new ResponseEntity<>(notificationTypeService.findAll(pageable),HttpStatus.OK);
     }
     @DeleteMapping("/type/{id}")
-    public void deleteNotificationType(@PathVariable Long id)
+    @CheckSecurity(roles = {"ROLE_ADMIN"})
+    public void deleteNotificationType(@RequestHeader("Authorization") String authorization,
+                                       @PathVariable Long id)
     {
         notificationTypeService.deleteNotificationType(id);
     }
 
     @PutMapping("/type")
-    public ResponseEntity<NotificationTypeDto> updateNotificationType(@RequestBody @Valid NotificationTypeUpdateDto notificationTypeUpdateDto)
+    @CheckSecurity(roles = {"ROLE_ADMIN"})
+    public ResponseEntity<NotificationTypeDto> updateNotificationType(@RequestHeader("Authorization") String authorization,
+                                                                      @RequestBody @Valid NotificationTypeUpdateDto notificationTypeUpdateDto)
     {
+        String name = notificationTypeUpdateDto.getOldName();
+        if(name.equals("activation") || name.equals("booking") || name.equals("cancellation)") || name.equals("reminder") || name.equals("passwordChange"))
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         return new ResponseEntity<>(notificationTypeService.updateNotificationType(notificationTypeUpdateDto),HttpStatus.OK);
     }
     @PostMapping("/type")
-    public ResponseEntity<NotificationTypeDto> addNotificationType(@RequestBody @Valid NotificationTypeCreateDto notificationTypeCreateDto)
+    @CheckSecurity(roles = {"ROLE_ADMIN"})
+    public ResponseEntity<NotificationTypeDto> addNotificationType(@RequestHeader("Authorization") String authorization,
+                                                                   @RequestBody @Valid NotificationTypeCreateDto notificationTypeCreateDto)
     {
         return new ResponseEntity<>(notificationTypeService.addNotificationType(notificationTypeCreateDto),HttpStatus.OK);
     }
-
+    @GetMapping("/em")
+    public ResponseEntity<String> sendEmail()
+    {
+        emailService.sendSimpleMessage("ucolic3021rn@raf.rs", "reminder", List.of("Uros","Colic","19:00"));
+        return new ResponseEntity<>("Sent.", HttpStatus.OK);
+    }
 }

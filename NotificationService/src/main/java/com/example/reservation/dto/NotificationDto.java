@@ -10,6 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 public class NotificationDto {
     private Long id;
+    private String email;
     private NotificationTypeDto notificationTypeDto;
     private List<String> parameters;
 

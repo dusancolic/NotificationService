@@ -1,7 +1,6 @@
 package com.example.reservation.service;
 
 
-import com.example.reservation.domain.NotificationType;
 import com.example.reservation.dto.NotificationDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,12 +16,5 @@ public interface NotificationService {
     Page<NotificationDto> findAllByTypeAndByEmail(String type, String email, Pageable pageable);
     Page<NotificationDto> findAllByTypeAndInRange(String type, LocalDate beginDate, LocalDate endDate, Pageable pageable);
     Page<NotificationDto> findAllByTypeAndByEmailAndInRange(String type, String email, LocalDate beginDate, LocalDate endDate, Pageable pageable);
-//    Page<NotificationDto> findAllRole(Long id, Pageable pageable);
-//    Page<NotificationDto> findAllClientInRange(Pageable pageable);
-//    Page<NotificationDto> findAllClientByType(Pageable pageable);
-
-//    Page<NotificationDto> findAllManager(Long id, Pageable pageable);
-//    Page<NotificationDto> findAllManagerInRange(Pageable pageable);
-//    Page<NotificationDto> findAllManagerByType(Pageable pageable);
 
 }

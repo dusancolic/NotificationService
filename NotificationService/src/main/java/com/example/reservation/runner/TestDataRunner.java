@@ -4,6 +4,7 @@ import com.example.reservation.domain.Notification;
 import com.example.reservation.domain.NotificationType;
 import com.example.reservation.repository.NotificationRepository;
 import com.example.reservation.repository.NotificationTypeRepository;
+import com.example.reservation.service.EmailService;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -52,24 +53,24 @@ public class TestDataRunner implements CommandLineRunner {
     public void run(String... args) throws Exception {
         NotificationType notificationType = new NotificationType();
         notificationType.setName("activation");
-        notificationType.setText("Welcome 1 2, here is your activation link : 3");
+        notificationType.setText("Welcome 1s 2s, here is your activation link : 3s");
 
         NotificationType notificationType2 = new NotificationType();
         notificationType2.setName("passwordChange");
-        notificationType2.setText("Hello 1 2, your have changed your password.");
+        notificationType2.setText("Hello 1s 2s, your have successfully changed your password.");
 
         NotificationType notificationType3 = new NotificationType();
-        notificationType3.setName("cancelation");
-        notificationType3.setText("Hello 1 2, your training on 3 , at 4 has been canceled.");
+        notificationType3.setName("cancellation");
+        notificationType3.setText("Hello 1s 2s, your training on 3s , at 4s has been canceled.");
 
 
         NotificationType notificationType4 = new NotificationType();
         notificationType4.setName("booking");
-        notificationType4.setText("Hello 1 2, you have successfully booked a training on 3 , at 4 ");
+        notificationType4.setText("Hello 1s 2s, you have successfully booked a training on 3s , at 4s ");
 
         NotificationType notificationType5 = new NotificationType();
         notificationType5.setName("reminder");
-        notificationType5.setText("Hello 1 2, this is your reminder that you have a training tomorrow at this time.");
+        notificationType5.setText("Hello 1s 2s, this is a reminder that you have a training tomorrow , at 3s ");
 
         notificationTypeRepository.save(notificationType);
         notificationTypeRepository.save(notificationType2);
@@ -77,12 +78,12 @@ public class TestDataRunner implements CommandLineRunner {
         notificationTypeRepository.save(notificationType4);
         notificationTypeRepository.save(notificationType5);
 
-        Notification notification = new Notification("uroscolic02@gmail.com", notificationType, List.of("Dusan","Colic"));
-        notificationType.setText(notificationType.getText()
+        //Notification notification = new Notification("dusancolic02@gmail.com", notificationType, List.of("Dusan","Colic"));
+        /*notificationType.setText(notificationType.getText()
                 .replace("1",notification.getParameters().get(0))
-                .replace("2",notification.getParameters().get(1)));
+                .replace("2",notification.getParameters().get(1)));*/
         notificationTypeRepository.save(notificationType);
-        notificationRepository.save(notification);
+        //notificationRepository.save(notification);
 
 
     }
