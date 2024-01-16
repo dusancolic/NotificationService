@@ -138,6 +138,8 @@ public class NotificationController {
     public void deleteNotificationType(@RequestHeader("Authorization") String authorization,
                                        @PathVariable Long id)
     {
+        if(id<=5)
+            return;
         notificationTypeService.deleteNotificationType(id);
     }
 
